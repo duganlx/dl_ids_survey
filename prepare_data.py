@@ -88,15 +88,15 @@ params.nsl_map_to_five_classes = True
 params.ids2017_small = False
 params.ids2017_datasets_dir = '../Datasets/CIC_IDS_2017/MachineLearningCSV/MachineLearningCVE'
 params.ids2017_files_list = [
-                'Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv',
-                'Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv',
-                'Friday-WorkingHours-Morning.pcap_ISCX.csv',
-                'Monday-WorkingHours.pcap_ISCX.csv',
-                'Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv',
-                'Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv',   # Issue with flows file
-                'Tuesday-WorkingHours.pcap_ISCX.csv',
-                'Wednesday-workingHours.pcap_ISCX.csv'
-                ]
+    'Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv',
+    'Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv',
+    'Friday-WorkingHours-Morning.pcap_ISCX.csv',
+    'Monday-WorkingHours.pcap_ISCX.csv',
+    'Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv',
+    'Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv',  # Issue with flows file
+    'Tuesday-WorkingHours.pcap_ISCX.csv',
+    'Wednesday-workingHours.pcap_ISCX.csv'
+]
 
 params.ids2017_hist_num_bins = 10000
 
@@ -107,20 +107,20 @@ params.ids2017_flow_seqs_max_flow_duration_secs = 3
 # IDS 2018 params
 params.ids2018_datasets_dir = '../Datasets/CIC_IDS_2018'
 params.ids2018_files_list = [
-                'Friday-02-03-2018_TrafficForML_CICFlowMeter.csv',
-                'Friday-16-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Friday-23-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_1.csv',
-                'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_2.csv',
-                'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_3.csv',
-                'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_4.csv',
-                'Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv',
-                'Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Thursday-22-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Wednesday-21-02-2018_TrafficForML_CICFlowMeter.csv',
-                'Wednesday-28-02-2018_TrafficForML_CICFlowMeter.csv'
-                ]
+    'Friday-02-03-2018_TrafficForML_CICFlowMeter.csv',
+    'Friday-16-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Friday-23-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_1.csv',
+    'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_2.csv',
+    'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_3.csv',
+    'Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv_split_4.csv',
+    'Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv',
+    'Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Thursday-22-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Wednesday-21-02-2018_TrafficForML_CICFlowMeter.csv',
+    'Wednesday-28-02-2018_TrafficForML_CICFlowMeter.csv'
+]
 params.ids2018_all_X_filename = 'ids2018_all_X.h5'
 params.ids2018_all_y_filename = 'ids2018_all_y.h5'
 params.ids2018_load_scaler_obj = True
@@ -137,12 +137,8 @@ def initial_setup(output_dir, params):
     # Setup logging
     log_filename = output_dir + '/' + 'run_log.log'
 
-    logging.basicConfig(
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.FileHandler(log_filename, 'w+'),
-                  logging.StreamHandler()],
-        level=logging.INFO
-    )
+    logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s",
+                        handlers=[logging.FileHandler(log_filename, 'w+'), logging.StreamHandler()], level=logging.INFO)
     logging.info('Initialized logging. log_filename = {}'.format(log_filename))
 
     logging.info('Running script with following parameters\n{}'.format(pformat(params.__dict__)))
@@ -163,7 +159,6 @@ def prepare_kdd99_small_datasets(params):
 
     X = dataset_df.iloc[:, :-1]  # All columns except the last
     y = dataset_df.iloc[:, -1]  # last column
-
 
     # Check class labels (counts, percentages of each class)
     label_counts, label_perc = utility.count_labels(y)
@@ -228,13 +223,12 @@ def prepare_kdd99_full_datasets(params):
     if params.kdd99_map_to_five_classes:
         num_classes = len(set(params.kdd_five_class_map.values()))
         assert num_classes == 4
-    
+
         y_train.replace(params.kdd_five_class_map, inplace=True)
         y_test.replace(params.kdd_five_class_map, inplace=True)
-    
-        assert y_train.nunique() == num_classes + 1 # +1 for the normal class
-        assert y_test.nunique() == num_classes + 1
 
+        assert y_train.nunique() == num_classes + 1  # +1 for the normal class
+        assert y_test.nunique() == num_classes + 1
 
     # Check class labels of train set (counts, percentages of each class)
     label_counts, label_perc = utility.count_labels(y_train)
@@ -326,11 +320,11 @@ def prepare_nsl_kdd_datasets(params):
     if params.nsl_map_to_five_classes:
         num_classes = len(set(params.kdd_five_class_map.values()))
         assert num_classes == 4
-    
+
         y.replace(params.kdd_five_class_map, inplace=True)
         y_test.replace(params.kdd_five_class_map, inplace=True)
-    
-        assert y.nunique() == num_classes + 1 # +1 for the normal class
+
+        assert y.nunique() == num_classes + 1  # +1 for the normal class
         assert y_test.nunique() == num_classes + 1
 
     # Check class labels (counts, percentages of each class)
@@ -405,7 +399,7 @@ def prepare_ids2017_datasets(params):
     # Remove unicode values in class labels
     logging.info('Converting unicode labels to ascii')
     all_data['Label'] = all_data['Label'].apply(lambda x: x.encode('ascii', 'ignore').decode("utf-8"))
-    all_data['Label'] = all_data['Label'].apply(lambda x: re.sub(' +', ' ', x)) # Remove double spaces
+    all_data['Label'] = all_data['Label'].apply(lambda x: re.sub(' +', ' ', x))  # Remove double spaces
 
     # Following type conversion and casting (both) are necessary to convert the values in cols 14, 15 detected as objects
     # Otherwise, the training algorithm does not work as expected
@@ -602,7 +596,6 @@ def prepare_ids2018_datasets_stage_2(params):
     pd.set_option('display.float_format', '{:.4f}'.format)
     logging.info("\n{}".format(label_perc))
 
-
     # Split into 3 sets (train, validation, test)
     logging.info('Splitting dataset set into 3 (train, validation, test)')
     splits = utility.split_dataset(X_info_all, y_all, [0.6, 0.2, 0.2])
@@ -624,7 +617,8 @@ def prepare_ids2018_datasets_stage_2(params):
             X_extracted = X_in_file.loc[train_indexes_in_file, X_in_file.columns != 'Label']
 
             columns = list(range(0, X_extracted.shape[1]))
-            scaler_obj = utility.partial_scaler(X_extracted, scale_type='standard', columns=columns, scaler_obj=scaler_obj)
+            scaler_obj = utility.partial_scaler(X_extracted, scale_type='standard', columns=columns,
+                                                scaler_obj=scaler_obj)
 
         utility.save_obj_to_disk(scaler_obj, params.ids2018_scaler_obj_path)
         logging.info("Partial scaler parameters below. \n{}".format(scaler_obj.get_params()))
@@ -746,7 +740,7 @@ def prepare_ids2018_shrink_dataset(params):
 
 
 def shrink_dataset(X_info_df, y_df, shrink_to_rate):
-    jump = math.ceil(1/shrink_to_rate)
+    jump = math.ceil(1 / shrink_to_rate)
 
     assert X_info_df.shape[0] == y_df.shape[0]
 
@@ -766,10 +760,9 @@ def main():
 
     # prepare_kdd99_full_datasets(params)
 
-    prepare_nsl_kdd_datasets(params)
+    # prepare_nsl_kdd_datasets(params)
 
     # prepare_ids2017_datasets(params)  # Small subset vs. full is controlled by config flag
-
 
     # Following 3 are for preparing the IDS 2018 dataset (20% subset)
     # prepare_ids2018_datasets_stage_1(params)
@@ -781,4 +774,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
