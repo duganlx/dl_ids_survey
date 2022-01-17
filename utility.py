@@ -1,9 +1,10 @@
 import time, logging
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import StratifiedShuffleSplit # Does not seem to work with multiple classes
+from sklearn.model_selection import StratifiedShuffleSplit  # Does not seem to work with multiple classes
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, \
+    classification_report
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from keras.utils import np_utils
 from sklearn.preprocessing import LabelEncoder
@@ -22,7 +23,7 @@ def read_csv(filename, header_row=0, dtypes=None, columns_to_read=None):
 
     logging.info('Reading complete. time_to_read={:.2f} sec'.format(time.time() - t0))
 
-    return dataset_df   # This is a Pandas DataFrame
+    return dataset_df  # This is a Pandas DataFrame
 
 
 def read_hdf(filename, key):
@@ -37,6 +38,15 @@ def read_hdf(filename, key):
 
 
 def write_to_hdf(df, filename, key, compression_level, mode='a', format='fixed'):
+    """
+    Write the contained data to an HDF5 file using HDFStore.
+
+    Hierarchical Data Format (HDF) is self-describing, allowing an application to interpret the structure and contents
+    of a file with no outside information. One HDF file can hold a mix of related objects which can be accessed as a
+    group or as individual objects.
+
+    to_hdf() api: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html
+    """
     logging.info('Writing dataset to HDF5 format. filename={}'.format(filename))
     t0 = time.time()
 
@@ -55,6 +65,10 @@ def write_to_csv(df, filename, write_index=False):
 
 
 def load_datasets(files_list, header_row=0, strip_col_name_spaces=False, dtypes=None, columns_to_read=None):
+    """
+    Loads the data set specified by files_list.
+    """
+
     def strip_whitespaces(str):
         return str.strip()
 
@@ -76,13 +90,16 @@ def load_datasets(files_list, header_row=0, strip_col_name_spaces=False, dtypes=
 
 def print_info(df):
     logging.info("Dataset shape = {}".format(df.shape))
-    df.info(memory_usage='deep')    # Some info about the dataset (memory usage etc.)
+    df.info(memory_usage='deep')  # Some info about the dataset (memory usage etc.)
 
     pd.set_option("display.precision", 4)  # Show more decimals
     logging.info(df.head())
 
 
 def count_labels(label_col):
+    """
+    Calculate the number of each label in label_col and calculate its proportion.
+    """
     label_counts = label_col.value_counts(dropna=False)
     total_count = sum(label_counts)
 
@@ -104,8 +121,8 @@ def print_dataset_label_info(label_col, dataset_name):
 def split_dataset_deprecated(dataset):
     logging.info('Preparing dataset - split into training, validation, test - 60%, 20%, 20%')
 
-    X = dataset.loc[:, dataset.columns != 'Label']    # All columns except the last
-    y = dataset['Label']    # Last column
+    X = dataset.loc[:, dataset.columns != 'Label']  # All columns except the last
+    y = dataset['Label']  # Last column
 
     # First split (60% training, 40% for the rest (validation + test))
     sss2 = StratifiedShuffleSplit(n_splits=1, test_size=0.4)
@@ -128,7 +145,7 @@ def split_dataset_deprecated(dataset):
     assert count == 1
 
     logging.info('Dataset sizes: original_size={}, train_size={}, val_size={}, test_size={}'
-          .format(len(X), len(X_train), len(X_val), len(X_test)))
+                 .format(len(X), len(X_train), len(X_val), len(X_test)))
 
     logging.info('Prepared dataset')
 
@@ -136,6 +153,9 @@ def split_dataset_deprecated(dataset):
 
 
 def split_dataset(X, y, split_rates, random_seed=None):
+    """
+    X and y are split in a hierarchical manner at the proportions required by split_rates
+    """
     assert sum(split_rates) == 1
 
     X_2 = X
@@ -151,7 +171,7 @@ def split_dataset(X, y, split_rates, random_seed=None):
         X_1, X_2, y_1, y_2 = train_test_split(X_2, y_2, stratify=y_2, test_size=remain_rate, random_state=random_seed)
         result_splits.append((X_1, y_1))
 
-    result_splits.append((X_2, y_2))    # Final remaining part
+    result_splits.append((X_2, y_2))  # Final remaining part
 
     return result_splits
 
@@ -169,10 +189,12 @@ def convert_labels_to_numbers(labels_list, label_col, start_with_one=True):
 
 
 def one_hot_encode(X, columns):
-    encoded_df = pd.get_dummies(X, columns=columns) # This deletes the original cols
-    # encoded_df.to_csv('encoded_df.csv')   # Debugging
-    # encoded_df.drop(columns=columns, inplace=True)
-    # out = pd.concat([X, encoded_df], axis=1)
+    """
+    The columns in the DataFrame X to convert into dummy indicators
+
+    get_dummies api: https://pandas.pydata.org/docs/reference/api/pandas.get_dummies.html
+    """
+    encoded_df = pd.get_dummies(X, columns=columns)  # This deletes the original cols
     return encoded_df
 
 
@@ -192,8 +214,14 @@ def encode_labels(y, encoder=None):
 
 
 def scale_training_set(X_train, scale_type, columns):
-    # X = X_train[columns]
-    X = X_train.iloc[:, columns]
+    """
+    Specify how to normalize using scale_type, and then normalize the specified columns in the X_train.
+
+    StandardScaler: Standardize features by removing the mean and scaling to unit variance
+    - fit(): Compute the mean and std to be used for later scaling.
+    - transform(): Perform standardization by centering and scaling
+    """
+    scaler_obj = None
     if scale_type == 'standard':
         scaler_obj = StandardScaler()
     elif scale_type == 'min_max':
@@ -201,17 +229,11 @@ def scale_training_set(X_train, scale_type, columns):
 
     logging.info('Created new scaler: {}'.format(scaler_obj))
 
-    scaler_obj.fit(X)
-    scaled_X = scaler_obj.transform(X)
-    scaled_X_df = pd.DataFrame(scaled_X, columns=X.columns)
+    scale_X = X_train.iloc[:, columns]  # Get the subset needed to normalize
+    scaler_obj.fit(scale_X)
+    scaled_X_df = pd.DataFrame(scaler_obj.transform(scale_X), columns=scale_X.columns)
 
-    # X_train_remain = X_train.drop(columns=orig_columns) # Drop original columns
-
-    # X_train_remain = X_train.drop(columns, axis='index') # Drop original columns
-
-    # orig_columns = X_train.columns[columns].tolist()
-    orig_columns = X_train.columns[columns]
-    X_train_remain = X_train.drop(orig_columns, axis='columns') # Drop original columns
+    X_train_remain = X_train.drop(scale_X.columns, axis='columns')  # Drop original columns
 
     X_train_remain.reset_index(drop=True, inplace=True)
     scaled_X_df.reset_index(drop=True, inplace=True)
@@ -236,16 +258,14 @@ def partial_scaler(X, scale_type, columns, scaler_obj=None):
 
 
 def scale_dataset(X_orig, scaler, columns):
-    # X = X_orig[columns]
-    X = X_orig.iloc[:, columns]
+    """
+    Using scaler to normalize the DataFrame X_orig. The scaler is already trained.
+    """
+    scale_X = X_orig.iloc[:, columns]
 
-    scaled_X = scaler.transform(X)
-    scaled_X_df = pd.DataFrame(scaled_X, columns=X.columns)
+    scaled_X_df = pd.DataFrame(scaler.transform(scale_X), columns=scale_X.columns)
 
-    # X_remain = X_orig.drop(columns=columns)  # Drop original columns
-
-    orig_columns = X_orig.columns[columns]
-    X_remain = X_orig.drop(orig_columns, axis='columns')  # Drop original columns
+    X_remain = X_orig.drop(scale_X.columns, axis='columns')  # Drop original columns
 
     X_remain.reset_index(drop=True, inplace=True)
     scaled_X_df.reset_index(drop=True, inplace=True)
@@ -269,7 +289,7 @@ def save_training_history(history, save_dir):
 
     train_loss = np.array(history.history['loss'])
     n = train_loss.shape[0]
-    epoch = np.arange(1, n+1)
+    epoch = np.arange(1, n + 1)
     val_loss = np.zeros(n)
     val_f1 = np.zeros(n)
 
@@ -323,14 +343,14 @@ def evaluate_on_conf_mat(labels, conf_mat):
     TN = conf_mat.sum() - (FP + FN + TP)
 
     # Per class metrics
-    TPR = TP / (TP + FN)    # Sensitivity, hit rate, recall, or true positive rate
-    TNR = TN / (TN + FP)    # Specificity or true negative rate
-    PPV = TP / (TP + FP)    # Precision or positive predictive value
-    NPV = TN / (TN + FN)    # Negative predictive value
-    FPR = FP / (FP + TN)    # Fall out or false positive rate
-    FNR = FN / (TP + FN)    # False negative rate or miss rate
-    FDR = FP / (TP + FP)    # False discovery rate
-    ACC = (TP + TN) / (TP + FP + FN + TN)   # Accuracy
+    TPR = TP / (TP + FN)  # Sensitivity, hit rate, recall, or true positive rate
+    TNR = TN / (TN + FP)  # Specificity or true negative rate
+    PPV = TP / (TP + FP)  # Precision or positive predictive value
+    NPV = TN / (TN + FN)  # Negative predictive value
+    FPR = FP / (FP + TN)  # Fall out or false positive rate
+    FNR = FN / (TP + FN)  # False negative rate or miss rate
+    FDR = FP / (TP + FP)  # False discovery rate
+    ACC = (TP + TN) / (TP + FP + FN + TN)  # Accuracy
     F1 = (2 * PPV * TPR) / (PPV + TPR)  # F1 score
     support = TP + FN
 
@@ -388,7 +408,7 @@ def convert_to_binary_conf_mat(labels, conf_mat, normal_label, attack_label):
     normal_idx = [i for i, label in enumerate(labels) if re.search(regex, label, re.IGNORECASE)]
 
     # Verify that at least one of the "normal" class exists
-    assert len(normal_idx) == 1   # If this assertion fails, check that your normal class label is correct
+    assert len(normal_idx) == 1  # If this assertion fails, check that your normal class label is correct
     normal_idx = normal_idx[0]
 
     norm_norm = conf_mat[normal_idx, normal_idx]
@@ -436,7 +456,6 @@ def write_to_excel(excel_writer, sheet, metrics, avg_metrics, start_row=0):
 
     curr_row = start_row
 
-
     # Write per-class metrics
 
     df_class_results = pd.DataFrame({'class': labels, 'accuracy': accuracy, 'precision': precision,
@@ -445,16 +464,16 @@ def write_to_excel(excel_writer, sheet, metrics, avg_metrics, start_row=0):
     df_class_results.to_excel(excel_writer, sheet_name=sheet, startrow=curr_row, index=False)
     curr_row = curr_row + len(df_class_results) + 2
 
-
     # Write average metrics (overall)
 
     df_avg_results = pd.DataFrame({'average type': avg_metrics['avg_labels'], 'avg accuracy': avg_metrics['ACC'],
-                                   'avg precision': avg_metrics['PPV'], 'avg detection rate (recall)': avg_metrics['TPR'],
-                                   'avg false alarm rate': avg_metrics['FPR'], 'avg false negative rate': avg_metrics['FNR'],
+                                   'avg precision': avg_metrics['PPV'],
+                                   'avg detection rate (recall)': avg_metrics['TPR'],
+                                   'avg false alarm rate': avg_metrics['FPR'],
+                                   'avg false negative rate': avg_metrics['FNR'],
                                    'avg f1': avg_metrics['F1']})
     df_avg_results.to_excel(excel_writer, sheet_name=sheet, startrow=curr_row, index=False)
     curr_row = curr_row + len(df_avg_results) + 2
-
 
     # Write confusion matrix
 
@@ -526,7 +545,6 @@ def extract_flow_sequences(X, y, max_seq_length, max_seq_duration_secs):
         seq_X = X.iloc[start:end, :]
         seq_y = y.iloc[start:end]
 
-
         all_seqs_X[iter] = seq_X.values
         seq_y = np.array(seq_y.values).reshape(seq_y.shape[0], 1)
         all_seqs_y[iter] = seq_y
@@ -548,7 +566,7 @@ def remove_non_float_rows(df, cols):
             batch_size = 1000
             num_batches = int(np.ceil(num_rows / batch_size))
             i = 0
-            dummy_list = [] # To prevent the apply() call from getting optimized out
+            dummy_list = []  # To prevent the apply() call from getting optimized out
             # dummy_floats = []
             error_indexes = []  # List of indexes with non-float values
             for batch_idx in range(num_batches):
@@ -579,7 +597,8 @@ def convert_obj_cols_to_float(df, skip_cols):
             continue
         if df[col_name].dtype == np.object:
             try:
-                df.loc[:, col_name] = df[col_name].apply(lambda x: np.float64(x))   # .loc[] avoids making copies of df cols
+                df.loc[:, col_name] = df[col_name].apply(
+                    lambda x: np.float64(x))  # .loc[] avoids making copies of df cols
             except ValueError as error:
                 print('Conversion error in column: {}'.format(col_name))
                 assert False
@@ -598,4 +617,3 @@ def split_csv_file(filename, num_splits, output_dir):
 
         split_filename = output_dir + '/' + filename + '_split_' + str(idx + 1) + '.csv'
         write_to_csv(split, split_filename)
-

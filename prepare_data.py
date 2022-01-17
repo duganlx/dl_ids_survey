@@ -23,15 +23,15 @@ params.hdf_key = 'my_key'
 # params.output_dir = '../Datasets/small_datasets/ids2017'
 # params.output_dir = '../Datasets/small_datasets/ids2018'
 # ---- Full datasets
-# params.output_dir = '../Datasets/full_datasets/kdd99_five_classes'
+params.output_dir = '../Datasets/full_datasets/kdd99_five_classes'
 # params.output_dir = '../Datasets/full_datasets/ids2017'
 # params.output_dir = '../Datasets/full_datasets/ids2018'
-params.output_dir = '../Datasets/dummy'
+# params.output_dir = '../Datasets/dummy'
 
 # KDD99 params
-params.kdd99_10_percent_dataset_file = '../Datasets/KDD_99/training_set/kddcup.data_10_percent_corrected'
-params.kdd99_full_train_dataset_file = '../Datasets/KDD_99/training_set/kddcup.data.corrected'
-params.kdd99_full_test_dataset_file = '../Datasets/KDD_99/test_set/corrected'
+params.kdd99_10_percent_dataset_file = '../Datasets/KDD99/kddcup.data_10_percent_corrected'
+params.kdd99_full_train_dataset_file = '../Datasets/KDD99/kddcup.data.corrected'
+params.kdd99_full_test_dataset_file = '../Datasets/KDD99/corrected'
 params.kdd99_map_to_five_classes = True
 
 params.kdd_five_class_map = {
@@ -129,22 +129,32 @@ params.ids2018_scaler_obj_path = params.output_dir + '/' + 'partial_scaler_obj.p
 params.ids2018_shrink_to_rate = 0.2
 
 
-def initial_setup(output_dir, params):
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        logging.info('Created directory: {}'.format(output_dir))
+def initial_setup():
+    """
+    Create the output folder and configure the logging, including logging format and logging file.
+    """
+    if not os.path.exists(params.output_dir):
+        os.makedirs(params.output_dir)
+        logging.info('Created directory: {}'.format(params.output_dir))
 
-    # Setup logging
-    log_filename = output_dir + '/' + 'run_log.log'
+    log_filename = params.output_dir + '/' + 'run_log.log'
 
     logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s",
-                        handlers=[logging.FileHandler(log_filename, 'w+'), logging.StreamHandler()], level=logging.INFO)
+                        handlers=[logging.FileHandler(log_filename, 'w+'), logging.StreamHandler()],
+                        level=logging.INFO)
     logging.info('Initialized logging. log_filename = {}'.format(log_filename))
 
     logging.info('Running script with following parameters\n{}'.format(pformat(params.__dict__)))
 
 
-def prepare_kdd99_small_datasets(params):
+def prepare_kdd99_small_datasets():
+    """
+    The KDD99 subset named kddcup.data_10_percent_corrected includes 23 types (22 attack types + normal) of which at
+    least six are spy(2), perl(3), phf(4), multihop(7), ftp_write(8), loadmodule(9). The author first deleted the
+    least six types. The remaining data were divided into training set, validation set and test set according to 6:2:2.
+    In addition, one-hot encode is used for the three character features, and StandardScaler is used to normalize all
+    features. Finally, save the processed data by .h5 format in ../Datasets/small_datasets/kdd99.
+    """
     # Load dataset
     logging.info('Loading datasets')
     dataset_df = utility.load_datasets([params.kdd99_10_percent_dataset_file], header_row=None)
@@ -183,9 +193,9 @@ def prepare_kdd99_small_datasets(params):
     logging.info('Scaling numeric features (columns 4 to 41)')
     # columns = list(range(4, 40 + 1))  # These are the numeric fields to be scaled: bug: will skip some important numeric features
     columns = list(range(0, X_train.shape[1]))  # These are the numeric fields to be scaled
-    X_train_scaled, scaler = utility.scale_training_set(X_train, scale_type='standard', columns=columns)
-    X_val_scaled = utility.scale_dataset(X_val, scaler=scaler, columns=columns)
-    X_test_scaled = utility.scale_dataset(X_test, scaler=scaler, columns=columns)
+    X_train_scaled, s = utility.scale_training_set(X_train, scale_type='standard', columns=columns)
+    X_val_scaled = utility.scale_dataset(X_val, scaler=s, columns=columns)
+    X_test_scaled = utility.scale_dataset(X_test, scaler=s, columns=columns)
 
     # Save data files in HDF format
     logging.info('Saving prepared datasets (train, val, test) to: {}'.format(params.output_dir))
@@ -203,7 +213,7 @@ def prepare_kdd99_small_datasets(params):
     print_dataset_sizes(splits)
 
 
-def prepare_kdd99_full_datasets(params):
+def prepare_kdd99_full_datasets():
     # Load dataset
     logging.info('Loading datasets')
     train_set_df = utility.load_datasets([params.kdd99_full_train_dataset_file], header_row=None)
@@ -219,6 +229,8 @@ def prepare_kdd99_full_datasets(params):
 
     X_test = test_set_df.iloc[:, :-1]  # All columns except the last
     y_test = test_set_df.iloc[:, -1]  # last column
+
+    del train_set_df, test_set_df
 
     if params.kdd99_map_to_five_classes:
         num_classes = len(set(params.kdd_five_class_map.values()))
@@ -250,12 +262,13 @@ def prepare_kdd99_full_datasets(params):
     pd.set_option('display.float_format', '{:.4f}'.format)
     logging.info("\n{}".format(label_perc))
 
+    del label_counts, label_perc
+
     # One-hot encode the 3 non-numeric fields (do it on full dataset X_combined, so that all values are available to the encoder)
     logging.info('One-hot-encoding columns 1, 2, 3')
     X_train_len = X_train.shape[0]
 
-    X_combined = pd.concat([X_train, X_test])
-    X_combined_encoded = utility.one_hot_encode(X_combined, columns=[1, 2, 3])
+    X_combined_encoded = utility.one_hot_encode(pd.concat([X_train, X_test]), columns=[1, 2, 3])
 
     X_train = X_combined_encoded.iloc[:X_train_len, :]  # Separate again
     X_test = X_combined_encoded.iloc[X_train_len:, :]
@@ -264,14 +277,14 @@ def prepare_kdd99_full_datasets(params):
     logging.info('Splitting train set into 2 sets (train, validation)')
     splits = utility.split_dataset(X_train, y_train, [0.8, 0.2])
     (X_train, y_train), (X_val, y_val) = splits
-
+    del splits
     # Scaling
     logging.info('Scaling all features')
     # columns = list(range(4, 40 + 1))  # These are the numeric fields to be scaled: bug: will skip some important numeric features
     columns = list(range(0, X_train.shape[1]))  # These are the numeric fields to be scaled
-    X_train_scaled, scaler = utility.scale_training_set(X_train, scale_type='standard', columns=columns)
-    X_val_scaled = utility.scale_dataset(X_val, scaler=scaler, columns=columns)
-    X_test_scaled = utility.scale_dataset(X_test, scaler=scaler, columns=columns)
+    X_train_scaled, s = utility.scale_training_set(X_train, scale_type='standard', columns=columns)
+    X_val_scaled = utility.scale_dataset(X_val, scaler=s, columns=columns)
+    X_test_scaled = utility.scale_dataset(X_test, scaler=s, columns=columns)
 
     # Save data files in HDF format
     logging.info('Saving prepared datasets (train, val, test) to: {}'.format(params.output_dir))
@@ -382,6 +395,9 @@ def prepare_nsl_kdd_datasets(params):
 
 
 def print_dataset_sizes(datasets):
+    """
+    Save and print the logging about dataset message
+    """
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = datasets
     logging.info("No. of features = {}".format(X_train.shape[1]))
     logging.info("Training examples = {}".format(X_train.shape[0]))
@@ -471,13 +487,17 @@ def prepare_ids2017_datasets(params):
     print_dataset_sizes(splits)
 
 
-def add_additional_items_to_dict(dict, extra_char):
+def add_additional_items_to_dict(extra_char):
+    """
+    For each key in kDD_five_class_map, add a dot after it and save it to the variable new_dict.
+    Add the new_dict generated above to kdd_five_class_map.
+    """
     new_dict = {}
-    for key, val in dict.items():
+    for key, val in params.kdd_five_class_map.items():
         new_key = key + extra_char
         new_dict[new_key] = val
 
-    dict.update(new_dict)
+    params.kdd_five_class_map.update(new_dict)
 
 
 def prepare_ids2018_datasets_stage_1(params):
@@ -751,14 +771,14 @@ def shrink_dataset(X_info_df, y_df, shrink_to_rate):
 
 
 def main():
-    initial_setup(params.output_dir, params)
-    add_additional_items_to_dict(params.kdd_five_class_map, '.')
+    initial_setup()
+    add_additional_items_to_dict('.')
 
     # --------------------------------------
 
-    # prepare_kdd99_small_datasets(params)
+    # prepare_kdd99_small_datasets()
 
-    # prepare_kdd99_full_datasets(params)
+    prepare_kdd99_full_datasets()
 
     # prepare_nsl_kdd_datasets(params)
 
