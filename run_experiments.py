@@ -12,6 +12,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 import matplotlib
+
 matplotlib.use('Agg')
 
 # Common params
@@ -44,12 +45,19 @@ def create_tensorboard_log_dir(results_dir):
     logging.info('Created tensorboard log directory: {}'.format(log_dir))
     return log_dir
 
+
 def print_help():
     logging.info('Usage:')
     logging.info('./run_experiments.py <experiments_filename>')
 
 
 def get_filename_from_args():
+    """
+    To run the experiment, you need to take one parameter, the configuration information to run,
+    which comes from the .csv file in additional_exps directory
+
+    eg: python run_experiments.py experiment_specs/additional_exps/ann_data_efficiency.csv
+    """
     num_args = len(sys.argv)
 
     if num_args != 2:
@@ -67,10 +75,14 @@ def get_filename_from_args():
 
 
 def get_experiments(filename):
+    """
+    Read configuration parameters at runtime. Note that the # prefix indicates a comment and does not
+    actually execute as a configuration parameter.
+    """
     experiments = []
 
     with open(filename, mode='r') as experiments_file:
-        csv_dict_reader = csv.DictReader(filter(lambda row: row[0]!='#', experiments_file))
+        csv_dict_reader = csv.DictReader(filter(lambda row: row[0] != '#', experiments_file))
 
         for row in csv_dict_reader:
             experiments.append(row)
@@ -86,12 +98,12 @@ def convert_params_to_correct_types(params):
     for key, val in params.items():
         new_val = utility.convert(val)
 
-        if type(new_val) == str:    # If param is a comma separated string, convert it to a list of the elements
+        if type(new_val) == str:  # If param is a comma separated string, convert it to a list of the elements
             elements = new_val.split(",")
             if len(elements) > 1:
                 new_val = [utility.convert(x) for x in elements]
 
-                if new_val[-1] == '':   # One-element string (nothing after the comma)
+                if new_val[-1] == '':  # One-element string (nothing after the comma)
                     new_val = new_val[:-1]
 
         converted_params[key] = new_val
@@ -149,7 +161,8 @@ def train_model(model, exp_params, datasets, is_first_time=True):
     training_data_feed = exp_params['training_data_feed']
     if training_data_feed == 'preload':
         (X_train, y_train), (X_val, y_val), (X_test, y_test) = datasets
-        history = model.fit(X_train, y_train, X_val, y_val, X_test, y_test) # X_test, y_test is only for StopperOnGoal callback in ANN
+        history = model.fit(X_train, y_train, X_val, y_val, X_test,
+                            y_test)  # X_test, y_test is only for StopperOnGoal callback in ANN
 
     time_to_train = time.time() - t0
     logging.info('Training complete. time_to_train = {:.2f} sec, {:.2f} min'.format(time_to_train, time_to_train / 60))
@@ -182,11 +195,12 @@ def evaluate_classification_and_report(y_true, y_pred, excel_writer, dataset_nam
 
 
 def evaluate_reconstruction_and_report(x_true, x_recon, excel_writer, dataset_name):
-    reconstruction_mse = ((x_true - x_recon) ** 2).sum(axis=1) # Reconstruction error of each example
+    reconstruction_mse = ((x_true - x_recon) ** 2).sum(axis=1)  # Reconstruction error of each example
     dataset_mse = reconstruction_mse.mean()
     dataset_rmse = dataset_mse ** 0.5
 
-    logging.info('{} dataset reconstruction MSE = {:.2f}, RMSE = {:.2f}'.format(dataset_name, dataset_mse, dataset_rmse))
+    logging.info(
+        '{} dataset reconstruction MSE = {:.2f}, RMSE = {:.2f}'.format(dataset_name, dataset_mse, dataset_rmse))
 
     return reconstruction_mse
 
@@ -198,7 +212,7 @@ def compute_prediction_time(model, exp_params, datasets):
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = datasets
 
     total_samples = 0
-    for i in range(1, reps+1):
+    for i in range(1, reps + 1):
         logging.info('Making predictions: iteration {}'.format(i))
 
         if exp_params['model'] == 'lstm':
@@ -233,7 +247,8 @@ def test_classifier(label_encoder, model, exp_params, datasets):
     y_test_pred = model.predict_classes(X_test)
 
     time_to_predict = time.time() - t0
-    logging.info('Making predictions complete. time_to_predict = {:.2f} sec, {:.2f} min'.format(time_to_predict, time_to_predict / 60))
+    logging.info('Making predictions complete. time_to_predict = {:.2f} sec, {:.2f} min'.format(time_to_predict,
+                                                                                                time_to_predict / 60))
 
     # Convert integer predictions to original string labels
     y_train_pred_inv = label_encoder.inverse_transform(y_train_pred.flatten())
@@ -252,7 +267,8 @@ def test_classifier(label_encoder, model, exp_params, datasets):
     # Eval and report on Test, Val, Train sets
     evaluate_classification_and_report(y_test, y_test_pred_inv, excel_writer, "Testing", exp_params['normal_label'])
     if X_val is not None:
-        evaluate_classification_and_report(y_val, y_val_pred_inv, excel_writer, "Validation", exp_params['normal_label'])
+        evaluate_classification_and_report(y_val, y_val_pred_inv, excel_writer, "Validation",
+                                           exp_params['normal_label'])
     evaluate_classification_and_report(y_train, y_train_pred_inv, excel_writer, "Training", exp_params['normal_label'])
 
     excel_writer.save()
@@ -515,7 +531,8 @@ def run_experiment(exp_params):
     if training_data_feed == 'preload':
         if model == 'lstm':
             time_steps = exp_params['lstm_time_steps']
-            datasets_orig, datasets_enc, label_encoder = prepare_sequence_data(dataset_dir, time_steps, concat_train_valid)
+            datasets_orig, datasets_enc, label_encoder = prepare_sequence_data(dataset_dir, time_steps,
+                                                                               concat_train_valid)
             (X_train, y_train_enc), (X_val, y_val_enc), (X_test, y_test_enc) = datasets_enc
             # Set number of input nodes (features) and output nodes (no. of classes)
             exp_params['input_nodes'] = X_train.shape[2]

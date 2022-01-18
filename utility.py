@@ -68,7 +68,6 @@ def load_datasets(files_list, header_row=0, strip_col_name_spaces=False, dtypes=
     """
     Loads the data set specified by files_list.
     """
-
     def strip_whitespaces(str):
         return str.strip()
 
@@ -495,6 +494,12 @@ def convert_to_binary_classes(y, normal_str):
 
 
 def remove_new_classes(y1, X2, y2):
+    """
+    reset_index api: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.reset_index.html
+
+    y1 = pd.Series([1, 2, 3])    --> {Series:(3,)} (0, 1)(1, 2)(2, 3)
+    y2 = y1[[True, False, True]] --> {Series:(2,)} (0, 1)(2, 3)
+    """
     y1.reset_index(drop=True, inplace=True)
     X2.reset_index(drop=True, inplace=True)
     y2.reset_index(drop=True, inplace=True)

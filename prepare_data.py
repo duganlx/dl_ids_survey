@@ -18,12 +18,12 @@ params = Params()
 params.hdf_key = 'my_key'
 # ---- Small datasets
 # params.output_dir = '../Datasets/small_datasets/kdd99'
-# params.output_dir = '../Datasets/small_datasets/nsl_kdd_five_classes'
+params.output_dir = '../Datasets/small_datasets/nsl_kdd_five_classes'
 # params.output_dir = '../Datasets/small_datasets/nsl_kdd_five_classes_hard_test_set'
 # params.output_dir = '../Datasets/small_datasets/ids2017'
 # params.output_dir = '../Datasets/small_datasets/ids2018'
 # ---- Full datasets
-params.output_dir = '../Datasets/full_datasets/kdd99_five_classes'
+# params.output_dir = '../Datasets/full_datasets/kdd99_five_classes'
 # params.output_dir = '../Datasets/full_datasets/ids2017'
 # params.output_dir = '../Datasets/full_datasets/ids2018'
 # params.output_dir = '../Datasets/dummy'
@@ -214,6 +214,9 @@ def prepare_kdd99_small_datasets():
 
 
 def prepare_kdd99_full_datasets():
+    """
+    utility.scale_training_set() will occur the problem about out of memory.
+    """
     # Load dataset
     logging.info('Loading datasets')
     train_set_df = utility.load_datasets([params.kdd99_full_train_dataset_file], header_row=None)
@@ -272,15 +275,16 @@ def prepare_kdd99_full_datasets():
 
     X_train = X_combined_encoded.iloc[:X_train_len, :]  # Separate again
     X_test = X_combined_encoded.iloc[X_train_len:, :]
+    del X_combined_encoded
 
     # Split train set into 2 sets (train, validation)
     logging.info('Splitting train set into 2 sets (train, validation)')
     splits = utility.split_dataset(X_train, y_train, [0.8, 0.2])
     (X_train, y_train), (X_val, y_val) = splits
     del splits
+
     # Scaling
     logging.info('Scaling all features')
-    # columns = list(range(4, 40 + 1))  # These are the numeric fields to be scaled: bug: will skip some important numeric features
     columns = list(range(0, X_train.shape[1]))  # These are the numeric fields to be scaled
     X_train_scaled, s = utility.scale_training_set(X_train, scale_type='standard', columns=columns)
     X_val_scaled = utility.scale_dataset(X_val, scaler=s, columns=columns)
@@ -302,7 +306,10 @@ def prepare_kdd99_full_datasets():
     print_dataset_sizes(((X_train, y_train), (X_val, y_val), (X_test, y_test)))
 
 
-def prepare_nsl_kdd_datasets(params):
+def prepare_nsl_kdd_datasets():
+    """
+    Set output_dir to '.. /Datasets/small_datasets/nsl_kdd_five_classes'
+    """
     # Load dataset
     logging.info('Loading datasets')
     train_df = utility.load_datasets([params.nsl_train_file], header_row=None)
@@ -354,21 +361,22 @@ def prepare_nsl_kdd_datasets(params):
     logging.info('One-hot-encoding columns 1, 2, 3')
     X_len = X.shape[0]
 
-    X_combined = pd.concat([X, X_test])
-    X_combined_encoded = utility.one_hot_encode(X_combined, columns=[1, 2, 3])
-
+    X_combined_encoded = utility.one_hot_encode(pd.concat([X, X_test]), columns=[1, 2, 3])
     X = X_combined_encoded.iloc[:X_len, :]  # Separate again
     X_test = X_combined_encoded.iloc[X_len:, :]
+    del X_combined_encoded
 
     # Split into 2 sets (train, validation)
     logging.info('Splitting training set into 2 (train, validation)')
     splits = utility.split_dataset(X, y, [0.8, 0.2])
     (X_train, y_train), (X_val, y_val) = splits
+    del splits
 
     logging.info('Removing unseen (new) classes in test set')
     rows_before = X_test.shape[0]
     X_test, y_test = utility.remove_new_classes(y_train, X_test, y_test)
     logging.info('Removed {} rows'.format(rows_before - X_test.shape[0]))
+    del rows_before
 
     # Scaling
     logging.info('Scaling all features')
@@ -778,9 +786,9 @@ def main():
 
     # prepare_kdd99_small_datasets()
 
-    prepare_kdd99_full_datasets()
+    # prepare_kdd99_full_datasets()
 
-    # prepare_nsl_kdd_datasets(params)
+    prepare_nsl_kdd_datasets()
 
     # prepare_ids2017_datasets(params)  # Small subset vs. full is controlled by config flag
 
