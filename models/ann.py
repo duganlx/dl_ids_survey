@@ -10,7 +10,7 @@ import numpy as np
 
 
 class ANN:
-    def __init__(self): # Minimal constructor
+    def __init__(self):  # Minimal constructor
         pass
 
     def initialize(self, exp_params):
@@ -50,7 +50,7 @@ class ANN:
 
     def set_layers_weights(self, all_layers_weights):
         dense_layers = [layer for layer in self.ann.layers if type(layer) is Dense]
-        dense_layers = dense_layers[:-1]    # Ignore the output layer
+        dense_layers = dense_layers[:-1]  # Ignore the output layer
 
         assert len(dense_layers) == len(all_layers_weights)
 
@@ -85,9 +85,9 @@ class ANN:
             (X_train_set1, y_train_set1), (X_train_set2, y_train_set2) = splits
             dataset_hash = hashlib.sha1(str(X_train_set1).encode('utf-8')).hexdigest()
             logging.info('Split sizes (instances). total = {}, set1 = {}, set2 = {}, set1 dataset hash = {}'
-                .format(X_train.shape[0], X_train_set1.shape[0], X_train_set2.shape[0], dataset_hash))
+                         .format(X_train.shape[0], X_train_set1.shape[0], X_train_set2.shape[0], dataset_hash))
 
-            X_train, y_train = (X_train_set2, y_train_set2) # Train on set2
+            X_train, y_train = (X_train_set2, y_train_set2)  # Train on set2
 
         # --------------------------------
         # Create callbacks
@@ -133,7 +133,6 @@ class ANN:
             class_weights = class_weight.compute_class_weight('balanced', np.unique(y_ints), y_ints)
             logging.info("Class weights below.\n{}".format(class_weights))
 
-
         # --------------------------------
         # Fit
 
@@ -169,7 +168,8 @@ class ANN:
 
     def get_last_hidden_layer_activations(self, X):
         # Temp model from input to last layer
-        last_layer_model = Model(inputs=self.ann.input, outputs=self.ann.layers[-2].output) # -2 is the last hidden layer
+        last_layer_model = Model(inputs=self.ann.input,
+                                 outputs=self.ann.layers[-2].output)  # -2 is the last hidden layer
 
         last_layer_output = last_layer_model.predict(X)
         return last_layer_output
@@ -179,4 +179,4 @@ class ANN:
 
 
 if __name__ == "__main__":
-    assert False    # Not supposed to be run as a separate script
+    assert False  # Not supposed to be run as a separate script

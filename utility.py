@@ -189,8 +189,6 @@ def convert_labels_to_numbers(labels_list, label_col, start_with_one=True):
 
 def one_hot_encode(X, columns):
     """
-    The columns in the DataFrame X to convert into dummy indicators
-
     get_dummies api: https://pandas.pydata.org/docs/reference/api/pandas.get_dummies.html
     """
     encoded_df = pd.get_dummies(X, columns=columns)  # This deletes the original cols
@@ -275,6 +273,9 @@ def scale_dataset(X_orig, scaler, columns):
 
 
 def convert(val):
+    """
+    Change the type of val, trying int, float, str.
+    """
     constructors = [int, float, str]
     for c in constructors:
         try:

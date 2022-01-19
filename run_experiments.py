@@ -20,6 +20,9 @@ hdf_key = 'my_key'
 
 
 def setup_logging(output_dir):
+    """
+    Create the ourput_dir and initialize the run_log.log file.
+    """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         logging.info('Created directory: {}'.format(output_dir))
@@ -40,6 +43,9 @@ def setup_logging(output_dir):
 
 
 def create_tensorboard_log_dir(results_dir):
+    """
+    Create the running log in result_dir.
+    """
     log_dir = results_dir + '/tf_logs_run_' + time.strftime("%Y_%m_%d-%H_%M_%S")
     os.makedirs(log_dir)
     logging.info('Created tensorboard log directory: {}'.format(log_dir))
@@ -161,8 +167,8 @@ def train_model(model, exp_params, datasets, is_first_time=True):
     training_data_feed = exp_params['training_data_feed']
     if training_data_feed == 'preload':
         (X_train, y_train), (X_val, y_val), (X_test, y_test) = datasets
-        history = model.fit(X_train, y_train, X_val, y_val, X_test,
-                            y_test)  # X_test, y_test is only for StopperOnGoal callback in ANN
+        # X_test, y_test is only for StopperOnGoal callback in ANN
+        history = model.fit(X_train, y_train, X_val, y_val, X_test, y_test)
 
     time_to_train = time.time() - t0
     logging.info('Training complete. time_to_train = {:.2f} sec, {:.2f} min'.format(time_to_train, time_to_train / 60))
@@ -294,10 +300,13 @@ def create_model(model_name):
     return model
 
 
-# Some params are not required for all experiment specs
-# But they are needed for the code to be written in a consistent and readable manner
-# Therefore, sensible default values are set for those specs here
 def set_exp_param_defaults(exp_params):
+    """
+    Some params are not required for all experiment specs. But they are needed for the code to be written in a
+    consistent and readable manner. Therefore, sensible default values are set for those specs here.
+
+    dict.get(key, default=None): If key is not exit, default will be return.
+    """
     model_origin = exp_params.get('model_origin', 'new')
     action = exp_params.get('action', 'train_test')
     training_data_feed = exp_params.get('training_data_feed', 'preload')
@@ -413,11 +422,14 @@ def run_experiment_actions(model_origin, model_type, model_name, action, resourc
 
 
 def prepare_tabular_data(dataset_dir, concat_train_valid):
+    """
+    concat_train_valid=True --> Concat the train set and valid set and Invalid the valid set.
+
+    Load the dataset and use One-hot encode to convert the y set.
+    """
     # Load data
     logging.info('Loading datsets from: {}'.format(dataset_dir))
-    datasets_orig = load_datasets(dataset_dir)
-
-    (X_train, y_train), (X_val, y_val), (X_test, y_test) = datasets_orig
+    (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_datasets(dataset_dir)
 
     if concat_train_valid:
         X_train = pd.concat([X_train, X_val])
@@ -426,12 +438,12 @@ def prepare_tabular_data(dataset_dir, concat_train_valid):
         y_val = None
 
     # One-hot encode class labels (needed as output layer has multiple nodes)
-    label_encoder, unused = utility.encode_labels(pd.concat([y_train, y_val, y_test]), encoder=None)
-    unused, y_train_enc = utility.encode_labels(y_train, encoder=label_encoder)
+    label_encoder, _ = utility.encode_labels(pd.concat([y_train, y_val, y_test]), encoder=None)
+    _, y_train_enc = utility.encode_labels(y_train, encoder=label_encoder)
     y_val_enc = None
     if X_val is not None:
-        unused, y_val_enc = utility.encode_labels(y_val, encoder=label_encoder)
-    unused, y_test_enc = utility.encode_labels(y_test, encoder=label_encoder)
+        _, y_val_enc = utility.encode_labels(y_val, encoder=label_encoder)
+    _, y_test_enc = utility.encode_labels(y_test, encoder=label_encoder)
 
     datasets_orig = (X_train, y_train), (X_val, y_val), (X_test, y_test)
     datasets_enc = (X_train, y_train_enc), (X_val, y_val_enc), (X_test, y_test_enc)
@@ -507,7 +519,6 @@ def run_experiment(exp_params):
 
     exp_num = exp_params['experiment_num']
     logging.info('================= Running experiment no. {}  ================= \n'.format(exp_num))
-
     logging.info('Experiment parameters given below')
     logging.info("\n{}".format(exp_params))
 
@@ -533,19 +544,20 @@ def run_experiment(exp_params):
             time_steps = exp_params['lstm_time_steps']
             datasets_orig, datasets_enc, label_encoder = prepare_sequence_data(dataset_dir, time_steps,
                                                                                concat_train_valid)
-            (X_train, y_train_enc), (X_val, y_val_enc), (X_test, y_test_enc) = datasets_enc
+            (X_train, y_train_enc), _, _ = datasets_enc
             # Set number of input nodes (features) and output nodes (no. of classes)
             exp_params['input_nodes'] = X_train.shape[2]
             exp_params['output_nodes'] = y_train_enc.shape[2]
         else:
             datasets_orig, datasets_enc, label_encoder = prepare_tabular_data(dataset_dir, concat_train_valid)
-            (X_train, y_train_enc), (X_val, y_val_enc), (X_test, y_test_enc) = datasets_enc
+            (X_train, y_train_enc), _, _ = datasets_enc
             # Set number of input nodes (features) and output nodes (no. of classes)
             exp_params['input_nodes'] = X_train.shape[1]
             exp_params['output_nodes'] = y_train_enc.shape[1]
     else:
         assert False
 
+    del X_train, y_train_enc
     # ---------------------------------------
     # Run the experiment model
 
