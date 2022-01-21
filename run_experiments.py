@@ -487,11 +487,11 @@ def prepare_sequence_data(dataset_dir, time_steps, concat_train_valid):
     all_y = np.hstack(y_list)
 
     label_encoder, all_y_enc = utility.encode_labels(all_y, encoder=None)
-    unused, y_train_enc = utility.encode_labels(y_train_seq.flatten(), encoder=label_encoder)
+    _, y_train_enc = utility.encode_labels(y_train_seq.flatten(), encoder=label_encoder)
     y_val_enc = None
     if y_val_seq is not None:
-        unused, y_val_enc = utility.encode_labels(y_val_seq.flatten(), encoder=label_encoder)
-    unused, y_test_enc = utility.encode_labels(y_test_seq.flatten(), encoder=label_encoder)
+        _, y_val_enc = utility.encode_labels(y_val_seq.flatten(), encoder=label_encoder)
+    _, y_test_enc = utility.encode_labels(y_test_seq.flatten(), encoder=label_encoder)
 
     y_train_enc = y_train_enc.reshape(y_train_seq.shape[0], y_train_seq.shape[1], all_y_enc.shape[1])
     if y_val_seq is not None:

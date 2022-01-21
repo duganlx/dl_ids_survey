@@ -82,7 +82,6 @@ class StopperOnGoal(Callback):
         self.num_epochs = 0
         self.goal_reached = False
 
-
     def on_epoch_end(self, epoch, logs=None):
         X = self.out_of_sample_X
         y = self.out_of_sample_y
